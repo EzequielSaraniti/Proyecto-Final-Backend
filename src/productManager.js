@@ -1,11 +1,6 @@
-
 import fs from "fs"
-import express from "express"
 
-const app = express()
-const port = 3000
-
-class ProductManager {
+export class ProductManager {
     constructor(path) {
         this.path = path;
         if (fs.existsSync(path)) {
@@ -16,26 +11,19 @@ class ProductManager {
             fs.writeFileSync(path, "[]")
             this.products = []
         }
-
-
     }
 
     //method to add products to our variable products
-    async addProduct(title, description, price, thumbnail, code, stock) {
-        if (title && description && price && thumbnail && code && stock) {
-            if (this.products.find((product) => product.code === code)) {
+    async addProduct(obj) {
+        const data = await this.getProducts()
+        if (obj) {
+            if (data.find((product) => product.code === obj.code)) {
                 return ("The product already exists");
             } else {
-                this.products.push({
-                    id: this.products.length > 0 ? this.products[this.products.length - 1].id + 1 : 1,
-                    title: title,
-                    description: description,
-                    price: price,
-                    thumbnail: thumbnail,
-                    code: code,
-                    stock: stock,
-                });
-                const productsString = JSON.stringify(this.products, null, 2)
+                data.push(
+                    obj
+                );
+                const productsString = JSON.stringify(data, null, 2)
                 await fs.promises.writeFile(this.path, productsString)
             }
         }
@@ -64,7 +52,7 @@ class ProductManager {
     async updateProduct(id, object) {
         const productsString = await fs.promises.readFile(this.path, "utf-8")
         const productsFile = JSON.parse(productsString)
-        const product = productsFile.find((product) => product.id === id);
+        const product = productsFile.find((product) => product.id == id);
         if (product) {
             const updateProduct = { ...product, ...object }
             const index = productsFile.indexOf(product)
@@ -79,7 +67,7 @@ class ProductManager {
     async deleteProduct(id) {
         const productsString = await fs.promises.readFile(this.path, "utf-8")
         const productsFile = JSON.parse(productsString)
-        const product = productsFile.find((product) => product.id === id);
+        const product = productsFile.find((product) => product.id == id);
         if (product) {
             const index = productsFile.indexOf(product)
             productsFile.splice(index, 1)
@@ -89,41 +77,4 @@ class ProductManager {
         }
     }
 }
-
-//we add product
-const productManager = new ProductManager("productos.json");
-
-
-app.use(express.urlencoded({ extended: true }));
-
-app.listen(port, () => {
-    console.log(`Example app listening on port http://localhost:${port}`)
-})
-
-app.get('/products', (req, res) => {
-    const limit = req.query.limit
-
-    if (limit) {
-        const products = productManager.getProducts()
-        products.then((products) => {
-            return res.json(products.slice(0, limit))
-        })
-    } else {
-        const products = productManager.getProducts()
-        products.then((products) => {
-            return res.json(products)
-        })
-    }
-}
-)
-
-app.get('/products/:pid', (req, res) => {
-    const id = req.params.pid
-    const product = productManager.getProductById(parseInt(id));
-    product.then((product) => {
-        return res.json(product)
-    })
-}
-)
-
 
